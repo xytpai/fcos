@@ -1,0 +1,14 @@
+pip install cython
+git clone https://github.com/cocodataset/cocoapi.git
+cd cocoapi/PythonAPI
+make install (or python setup.py install)
+reconnect
+python
+from pycocotools.coco import COCO
+
+#### windows ####
+open setup.py
+delete '-Wno-cpp'，'-Wno-unused-function'
+python setup.py install
+reboot
+#################
