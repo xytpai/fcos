@@ -1,0 +1,30 @@
+{
+    "root_train": "/home1/xyt/dataset/VOC0712_trainval/JPEGImages",
+    "root_eval": "/home1/xyt/dataset/VOCdevkit/VOC2007/JPEGImages",
+    "list_train": "data/voc_trainval.txt",
+    "list_eval": "data/voc_test.txt",
+    "name_file": "data/voc_name.txt",
+
+    "load": false,
+    "save": true,
+    "pretrain": true,
+    "freeze_bn": true,
+    "epoch_num": [20,10],
+
+    "nbatch_train": 40,
+    "nbatch_eval": 40,
+    "device": [5,6,7,8,9],
+
+    "lr": 0.01,
+    "lr_decay": 0.1,
+    "momentum": 0.9,
+    "weight_decay": 0.0001,
+
+    "boxarea_th": 25,
+    "img_scale_min": 0.4,
+    "crop_scale_min": 0.2,
+    "aspect_ratio": [0.750, 1.333],
+    "remain_min": 0.8,
+
+    "grad_clip": 5
+}
