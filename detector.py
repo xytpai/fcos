@@ -146,9 +146,11 @@ class Detector(nn.Module):
 
             mask_cls = targets_cls > -1 # (b, an)
             cls_out = cls_out[mask_cls] # (S+-, classes)
+            cen_out = cen_out[mask_cls]
             reg_out = reg_out[mask_cls] # (S+-, 4)
             targets_cls = targets_cls[mask_cls] # (S+-)
             targets_reg = targets_reg[mask_cls] # (S+-, 4)
+            targets_cen = targets_cen[mask_cls]
 
             p = cls_out.sigmoid() # [S+-, classes]
 
@@ -171,6 +173,8 @@ class Detector(nn.Module):
 
             reg_out = reg_out[mask_reg] # (S+, 4)
             targets_reg = targets_reg[mask_reg] # # (S+, 4)
+            cen_out = cen_out[mask_reg]
+            targets_cen = targets_cen[mask_reg]
 
             return (loss_cls_1, mask_reg, reg_out, targets_reg, cen_out, targets_cen)
 

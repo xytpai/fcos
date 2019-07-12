@@ -62,12 +62,15 @@ def get_output(centre_yx, centre_minmax, label_class, label_box):
 
     Return:
     targets_cls:    LongTensor(acc_scale(Hi*Wi))
+    targets_cen:    FloatTensor(acc_scale(Hi*Wi))
     targets_reg:    FloatTensor(acc_scale(Hi*Wi), 4)
-
+    
     Note:
     in label_box 4: ymin, ymax, xmin, xmax
     in targets_reg 4: top, left, bottom, right
     '''
+    eps = 1e-3
+
     tl = centre_yx[:, None, :] - label_box[:, 0:2] 
     br = label_box[:, 2:4] - centre_yx[:, None, :]
     tlbr = torch.cat([tl, br], dim=2) # (ac, N, 4)
@@ -84,12 +87,22 @@ def get_output(centre_yx, centre_minmax, label_class, label_box):
     targets_cls[mask] = 0
 
     _label_box = label_box[_max_min_index]
-    _tl = centre_yx - _label_box[:, 0:2]
-    _br = _label_box[:, 2:4] - centre_yx
-    targets_reg = torch.cat([_tl, _br], dim=1) # (ac, 4)
-    targets_reg[mask] = 0
+    _tl = centre_yx - _label_box[:, 0:2] # (ac, 2)
+    _br = _label_box[:, 2:4] - centre_yx # (ac, 2)
+    _tlbr = torch.cat([_tl, _br], dim=1) # (ac, 4)
+    targets_reg = _tlbr
+    targets_reg[mask] = eps
 
-    return targets_cls, targets_reg
+    _lr = _tlbr[:, 1::2] # (ac, 2)
+    _tb = _tlbr[:, 0::2] # (ac, 2)
+    min_lr = torch.min(_lr, dim=1)[0] # (ac)
+    max_lr = torch.max(_lr, dim=1)[0] # (ac)
+    min_tb = torch.min(_tb, dim=1)[0] # (ac)
+    max_tb = torch.max(_tb, dim=1)[0] # (ac)
+    targets_cen = (min_lr*min_tb/max_lr/max_tb).sqrt()
+
+    return targets_cls, targets_cen, targets_reg
+
 
 
 if __name__ == '__main__':
@@ -106,8 +119,9 @@ if __name__ == '__main__':
         [1,1,3,3], # Y
         [1,1,5,5] # Y
     ])
-    targets_cls, targets_reg = get_output(centre_yx, centre_minmax,
-        label_class, label_box)
+    targets_cls, targets_cen, targets_reg = get_output(
+        centre_yx, centre_minmax, label_class, label_box)
     print(targets_cls)
+    print(targets_cen)
     print(targets_reg)
 

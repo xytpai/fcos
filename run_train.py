@@ -43,12 +43,15 @@ loader_eval = torch.utils.data.DataLoader(dataset_eval, batch_size=cfg['nbatch_e
 
 lr = cfg['lr']
 lr_decay = cfg['lr_decay']
-encoder = Encoder(net.module.a_hw, net.module.scales, net.module.first_stride, 
-            train_iou_th=net.module.iou_th, 
-            train_size=net.module.train_size,
-            eval_size=net.module.eval_size,
-            nms=net.module.nms, nms_th=net.module.nms_th, nms_iou=net.module.nms_iou,
-            max_detections=net.module.max_detections)
+encoder = Encoder(
+    net.module.regions,
+    net.module.first_stride,
+    net.module.train_size, 
+    net.module.eval_size,
+    net.module.nms, 
+    net.module.nms_th, 
+    net.module.nms_iou,
+    net.module.max_detections)
 
 
 epoch = 0
@@ -64,8 +67,8 @@ for epoch_num in cfg['epoch_num']:
         # Train
         for i, (img, bbox, label, scale) in enumerate(loader_train):
             opt.zero_grad()
-            cls_targets, reg_targets = encoder.encode(label, bbox)
-            temp = net(img, cls_targets, reg_targets)
+            targets_cls, targets_cen, targets_reg = encoder.encode(label, bbox)
+            temp = net(img, targets_cls, targets_cen, targets_reg)
             loss = get_loss(temp)
             loss.backward()
             clip = cfg['grad_clip']
