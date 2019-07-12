@@ -121,7 +121,7 @@ class Detector(nn.Module):
             reg_i = self.conv_reg(item)
             # cls_i: [b, 1 + classes, H, W] -> [b, H*W, 1 + classes]
             cls_i = cls_i.permute(0,2,3,1).contiguous()
-            cls_i = cls_i.view(cls_i.shape[0], -1, self.classes)
+            cls_i = cls_i.view(cls_i.shape[0], -1, 1 + self.classes)
             # reg_i: [b, 4, H, W] -> [b, H*W, 4]
             reg_i = reg_i.permute(0,2,3,1).contiguous()
             reg_i = reg_i.view(reg_i.shape[0], -1, 4)
