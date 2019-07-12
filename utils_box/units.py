@@ -63,39 +63,51 @@ def get_output(centre_yx, centre_minmax, label_class, label_box):
     Return:
     targets_cls:    LongTensor(acc_scale(Hi*Wi))
     targets_reg:    FloatTensor(acc_scale(Hi*Wi), 4)
+
+    Note:
+    in label_box 4: ymin, ymax, xmin, xmax
+    in targets_reg 4: top, left, bottom, right
     '''
     tl = centre_yx[:, None, :] - label_box[:, 0:2] 
     br = label_box[:, 2:4] - centre_yx[:, None, :]
     tlbr = torch.cat([tl, br], dim=2) # (ac, N, 4)
+
     _min = torch.min(tlbr, dim=2)[0]
     _max = torch.max(tlbr, dim=2)[0] # (ac, N)
     _max_min_index = torch.min(_max, dim=1)[1] # (ac)
+    
     mask_inside = _min > 0 # (ac, N)
-    mask_scale = (_max>centre_minmax[:,None,0])&(_max<=centre_minmax[:,None,1])
-    targets_cls = torch.
-    print(_max_min_index)
-    # print(_max)
-    # print(centre_minmax)
-    # print(mask_scale)
-    # print(l[:, 0, :])
+    mask_scale = (_max>centre_minmax[:,None,0])&(_max<=centre_minmax[:,None,1]) # (ac, N)
+    mask = ~torch.max((mask_inside&mask_scale), dim=1)[0] # (ac)
+    
+    targets_cls = label_class[_max_min_index] # (ac)
+    targets_cls[mask] = 0
 
+    _label_box = label_box[_max_min_index]
+    _tl = centre_yx - _label_box[:, 0:2]
+    _br = _label_box[:, 2:4] - centre_yx
+    targets_reg = torch.cat([_tl, _br], dim=1) # (ac, 4)
+    targets_reg[mask] = 0
+
+    return targets_cls, targets_reg
 
 
 if __name__ == '__main__':
 
     img_size = 5
     first_stride = 2
-    regions = [0, 4, 8]
+    regions = [0, 2, 8]
     centre_yx, centre_minmax = get_centre(img_size, first_stride, regions)
-    print(centre_yx)
-    # print(centre_minmax)
-    label_class = torch.LongTensor([2, 4, 0])
+    # print(centre_yx)
+    print(centre_minmax)
+    label_class = torch.LongTensor([2, 4, 1])
     label_box = torch.FloatTensor([
-        [1,1,2,2],
-        [4,5,6,8],
-        [2,2,2,2]
+        [1,1,2,2], # N
+        [1,1,3,3], # Y
+        [1,1,5,5] # Y
     ])
     targets_cls, targets_reg = get_output(centre_yx, centre_minmax,
         label_class, label_box)
-
+    print(targets_cls)
+    print(targets_reg)
 
