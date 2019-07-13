@@ -75,23 +75,25 @@ def get_output(centre_yx, centre_minmax, label_class, label_box):
     br = label_box[:, 2:4] - centre_yx[:, None, :]
     tlbr = torch.cat([tl, br], dim=2) # (ac, N, 4)
 
-    _min = torch.min(tlbr, dim=2)[0]
+    _min = torch.min(tlbr, dim=2)[0] # (ac, N)
     _max = torch.max(tlbr, dim=2)[0] # (ac, N)
-    _max_min_index = torch.min(_max, dim=1)[1] # (ac)
-    
     mask_inside = _min > 0 # (ac, N)
     mask_scale = (_max>centre_minmax[:,None,0])&(_max<=centre_minmax[:,None,1]) # (ac, N)
-    mask = ~torch.max((mask_inside&mask_scale), dim=1)[0] # (ac)
+    neg_mask = ~torch.max((mask_inside&mask_scale), dim=1)[0] # (ac)
+
+    _max[~mask_inside] = 999999
+    _max_min_index = torch.min(_max, dim=1)[1] # (ac)
     
     targets_cls = label_class[_max_min_index] # (ac)
-    targets_cls[mask] = 0
+    targets_cls[neg_mask] = 0
 
     _label_box = label_box[_max_min_index]
-    _tl = centre_yx - _label_box[:, 0:2] # (ac, 2)
-    _br = _label_box[:, 2:4] - centre_yx # (ac, 2)
+    _tl = centre_yx[:, :] - _label_box[:, 0:2] # (ac, 2)
+    _br = _label_box[:, 2:4] - centre_yx[:, :] # (ac, 2)
     _tlbr = torch.cat([_tl, _br], dim=1) # (ac, 4)
+
     targets_reg = _tlbr
-    targets_reg[mask] = eps
+    targets_reg[neg_mask] = 1
 
     _lr = _tlbr[:, 1::2] # (ac, 2)
     _tb = _tlbr[:, 0::2] # (ac, 2)
@@ -99,7 +101,7 @@ def get_output(centre_yx, centre_minmax, label_class, label_box):
     max_lr = torch.max(_lr, dim=1)[0] # (ac)
     min_tb = torch.min(_tb, dim=1)[0] # (ac)
     max_tb = torch.max(_tb, dim=1)[0] # (ac)
-    targets_cen = (min_lr*min_tb/max_lr/max_tb).sqrt()
+    targets_cen = ((min_lr*min_tb+eps)/(max_lr*max_tb+eps)).sqrt()
 
     return targets_cls, targets_cen, targets_reg
 
