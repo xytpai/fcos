@@ -155,7 +155,7 @@ class Encoder:
 
         reg_preds = []
         for b in range(cls_out.shape[0]):
-            tlbr = reg_out[b] * self.eval_centre_minmax[:, 1:2] # (s, 4)
+            tlbr = reg_out[b].exp() * self.eval_centre_minmax[:, 1:2] # (s, 4)
             tl, br = tlbr.split([2, 2], dim=1) # (s, 2)
             ymin_xmin = self.eval_centre_yx - tl
             ymax_xmax = self.eval_centre_yx + br
