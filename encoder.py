@@ -150,7 +150,7 @@ class Encoder:
         cen_out = cls_out[:, :, 0] # (b, s)
         cls_out = cls_out[:, :, 1:] # (b, s, classes)
         cls_p_preds, cls_i_preds = torch.max(cls_out.sigmoid(), dim=2) # (b, s)
-        cls_p_preds = cls_p_preds * cen_out
+        cls_p_preds = cls_p_preds * cen_out.sigmoid()
         cls_i_preds = cls_i_preds + 1
 
         reg_preds = []
