@@ -141,16 +141,15 @@ class Detector(nn.Module):
             #########################################################
             # TODO: loss step 1
             
-            cen_out = cls_out[:, :, 0].sigmoid() # (b, sum_scale(Hi*Wi))
+            cen_out = cls_out[:, :, 0] # (b, sum_scale(Hi*Wi))
             cls_out = cls_out[:, :, 1:]
 
-            mask_cls = targets_cls > -1 # (b, an)
-            cls_out = cls_out[mask_cls] # (S+-, classes)
-            cen_out = cen_out[mask_cls]
-            reg_out = reg_out[mask_cls] # (S+-, 4)
-            targets_cls = targets_cls[mask_cls] # (S+-)
-            targets_reg = targets_reg[mask_cls] # (S+-, 4)
-            targets_cen = targets_cen[mask_cls]
+            cls_out = cls_out.view(-1, self.classes)
+            cen_out = cen_out.view(-1)
+            reg_out = reg_out.view(-1, 4)
+            targets_cls = targets_cls.view(-1)
+            targets_reg = targets_reg.view(-1, 4)
+            targets_cen = targets_cen.view(-1)
 
             p = cls_out.sigmoid() # [S+-, classes]
 
@@ -195,6 +194,6 @@ def get_loss(temp):
         num_pos = 1.0
     
     loss_reg = F.smooth_l1_loss(reg_out, targets_reg, reduction='sum')
-    loss_cen = F.binary_cross_entropy(cen_out, targets_cen, reduction='sum')
+    loss_cen = F.binary_cross_entropy_with_logits(cen_out, targets_cen, reduction='sum')
     loss = (loss_cls + loss_reg + loss_cen) / num_pos
     return loss
