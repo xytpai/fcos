@@ -15,9 +15,9 @@ class Detector(nn.Module):
         # TODO: Param
         self.regions = [0, 64, 128, 256, 512 ,1024]
         self.first_stride = 8
-        self.train_size = 641
-        self.eval_size = 641
-        self.classes = 20
+        self.train_size = 1025
+        self.eval_size = 1025
+        self.classes = 80
         self.nms = True
         self.nms_th = 0.05
         self.nms_iou = 0.5
