@@ -2,6 +2,7 @@ import math
 import torch 
 import torch.nn as nn 
 import torch.nn.functional as F 
+from libs.sigmoid_focal_loss import sigmoid_focal_loss
 # TODO: choose backbone
 from backbone import resnet50 as backbone
 
@@ -136,63 +137,30 @@ class Detector(nn.Module):
         if targets_cls is None:
             return cls_out, reg_out
         else:
-            #########################################################
-            # split 2 steps to calculate loss in order to balance GPU
-            #########################################################
-            # TODO: loss step 1
-            
             cen_out = cls_out[:, :, 0] # (b, sum_scale(Hi*Wi))
             cls_out = cls_out[:, :, 1:]
-
             cls_out = cls_out.view(-1, self.classes)
             cen_out = cen_out.view(-1)
             reg_out = reg_out.view(-1, 4)
             targets_cls = targets_cls.view(-1)
             targets_reg = targets_reg.view(-1, 4)
             targets_cen = targets_cen.view(-1)
-
-            p = cls_out.sigmoid() # [S+-, classes]
-
-            one_hot = torch.zeros(cls_out.shape[0], 
-                1 + self.classes).to(cls_out.device).scatter_(1, 
-                    targets_cls.view(-1,1), 1) # [S+-, 1+classes]
-            one_hot = one_hot[:, 1:] # [S+-, classes]
-
-            pt = p*one_hot + (1.0-p)*(1.0-one_hot)
-
-            alpha = 0.25
-            gamma = 2
-
-            w = alpha*one_hot + (1.0-alpha)*(1.0-one_hot)
-            w = w * torch.pow((1.0-pt), gamma)
-
-            loss_cls_1 = -w * (pt+1e-10).log() # [S+-, classes]
-
+            loss_cls_1 = sigmoid_focal_loss(cls_out, targets_cls, 2.0, 0.25)
             mask_reg = targets_cls > 0 # (S+)
-
             reg_out = reg_out[mask_reg] # (S+, 4)
             targets_reg = targets_reg[mask_reg] # # (S+, 4)
             cen_out = cen_out[mask_reg]
             targets_cen = targets_cen[mask_reg]
-
             return (loss_cls_1, mask_reg, reg_out, targets_reg, cen_out, targets_cen)
 
 
 
 def get_loss(temp):
-    #########################################################
-    # split 2 steps to calculate loss in order to balance GPU
-    #########################################################
-    # TODO: loss step 2
-
     loss_cls_1, mask_reg, reg_out, targets_reg, cen_out, targets_cen = temp
-
     loss_cls = torch.sum(loss_cls_1)
-
     num_pos = float(torch.sum(mask_reg))
     if num_pos <= 0:
         num_pos = 1.0
-    
     loss_reg = F.smooth_l1_loss(reg_out, targets_reg, reduction='sum')
     loss_cen = F.binary_cross_entropy_with_logits(cen_out, targets_cen, reduction='sum')
     loss = (loss_cls + loss_reg + loss_cen) / num_pos
