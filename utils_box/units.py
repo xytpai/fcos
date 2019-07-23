@@ -81,7 +81,7 @@ def get_output(centre_yx, centre_minmax, label_class, label_box):
     mask_scale = (_max>centre_minmax[:,None,0])&(_max<=centre_minmax[:,None,1]) # (ac, N)
     neg_mask = ~torch.max((mask_inside&mask_scale), dim=1)[0] # (ac)
 
-    _max[~mask_inside] = 999999
+    _max[~mask_inside] = 1e8
     _max_min_index = torch.min(_max, dim=1)[1] # (ac)
     
     targets_cls = label_class[_max_min_index] # (ac)

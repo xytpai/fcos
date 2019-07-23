@@ -36,6 +36,11 @@ class Detector(nn.Module):
         self.conv_5 =nn.Conv2d(256, 256, kernel_size=3, padding=1)
         self.conv_4 =nn.Conv2d(256, 256, kernel_size=3, padding=1)
         self.conv_3 =nn.Conv2d(256, 256, kernel_size=3, padding=1)
+        self.scale_3 = nn.Parameter(torch.tensor(1.0).float())
+        self.scale_4 = nn.Parameter(torch.tensor(1.0).float())
+        self.scale_5 = nn.Parameter(torch.tensor(1.0).float())
+        self.scale_6 = nn.Parameter(torch.tensor(1.0).float())
+        self.scale_7 = nn.Parameter(torch.tensor(1.0).float())
 
         self.conv_cls = nn.Sequential(
             nn.Conv2d(256, 256, kernel_size=3, padding=1),
@@ -114,12 +119,15 @@ class Detector(nn.Module):
         P7 = self.conv_out7(self.relu(P6))
 
         pred_list = [P3, P4, P5, P6, P7]
+        scale_list = [self.scale_3, self.scale_4, 
+                        self.scale_5, self.scale_6, self.scale_7]
 
         cls_out = []
         reg_out = []
-        for item in pred_list:
-            cls_i = self.conv_cls(item)
-            reg_i = self.conv_reg(item)
+        for i in range(len(pred_list)):
+            cls_i = self.conv_cls(pred_list[i])
+            reg_i = self.conv_reg(pred_list[i])
+            reg_i = reg_i * scale_list[i]
             # cls_i: [b, 1 + classes, H, W] -> [b, H*W, 1 + classes]
             cls_i = cls_i.permute(0,2,3,1).contiguous()
             cls_i = cls_i.view(cls_i.shape[0], -1, 1 + self.classes)

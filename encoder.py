@@ -89,10 +89,10 @@ class Encoder:
         - all calculations are on the CPU
         - Hi,Wi accumulate from big to small
         - in targets_reg, 4 indicates:
-            f1 -> log(top / scale_norm)
-            f2 -> log(left / scale_norm)
-            f3 -> log(bottom / scale_norm)
-            f4 -> log(right / scale_norm)
+            f1 -> log(top)
+            f2 -> log(left)
+            f3 -> log(bottom)
+            f4 -> log(right)
         '''
         targets_cls = []
         targets_cen = []
@@ -145,10 +145,10 @@ class Encoder:
         - all calculations are on the CPU
         -  Hi,Wi accumulate from big to small
         - reg_out = f1, f2, f3, f4, decoding process:
-            top    = f1.exp() * scale_norm
-            left   = f2.exp() * scale_norm
-            bottom = f3.exp() * scale_norm
-            right  = f4.exp() * scale_norm
+            top    = f1.exp()
+            left   = f2.exp()
+            bottom = f3.exp()
+            right  = f4.exp()
             ymin, xmin = cy - top, cx - left
             ymax, xmax = cy + bottom, cx + right
         '''
@@ -160,7 +160,7 @@ class Encoder:
 
         reg_preds = []
         for b in range(cls_out.shape[0]):
-            tlbr = reg_out[b].exp() * self.eval_centre_minmax[:, 1:2] # (s, 4)
+            tlbr = reg_out[b].exp() # (s, 4)
             tl, br = tlbr.split([2, 2], dim=1) # (s, 2)
             ymin_xmin = self.eval_centre_yx - tl
             ymax_xmax = self.eval_centre_yx + br
