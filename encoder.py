@@ -108,7 +108,6 @@ class Encoder:
                 targets_cls_b, targets_cen_b, targets_reg_b = units.get_output(
                     self.train_centre_yx, self.train_centre_minmax, 
                     label_class[b], label_box[b]) # (pos), (pos, 4)
-                targets_reg_b /= self.train_centre_minmax[:, 1:2]
                 targets_reg_b = targets_reg_b.log()
 
             targets_cls.append(targets_cls_b)

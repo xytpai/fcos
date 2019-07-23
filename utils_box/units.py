@@ -66,42 +66,47 @@ def get_output(centre_yx, centre_minmax, label_class, label_box):
     targets_reg:    FloatTensor(acc_scale(Hi*Wi), 4)
     
     Note:
-    in label_box 4: ymin, ymax, xmin, xmax
+    in label_box 4: ymin, xmin, ymax, xmax
     in targets_reg 4: top, left, bottom, right
     '''
-    eps = 1e-3
+    eps = 1e-4
+    inf = 1e8
 
     tl = centre_yx[:, None, :] - label_box[:, 0:2] 
     br = label_box[:, 2:4] - centre_yx[:, None, :]
     tlbr = torch.cat([tl, br], dim=2) # (ac, N, 4)
+    hw = tl + br # (ac, N, 2)
+    area = hw[:, :, 0] * hw[:, :, 1] # (ac, N)
 
-    _min = torch.min(tlbr, dim=2)[0] # (ac, N)
-    _max = torch.max(tlbr, dim=2)[0] # (ac, N)
-    mask_inside = _min > 0 # (ac, N)
-    mask_scale = (_max>centre_minmax[:,None,0])&(_max<=centre_minmax[:,None,1]) # (ac, N)
-    neg_mask = ~torch.max((mask_inside&mask_scale), dim=1)[0] # (ac)
+    _min_tlbr = torch.min(tlbr, dim=2)[0] # (ac, N)
+    _max_tlbr = torch.max(tlbr, dim=2)[0] # (ac, N)
+    mask_inside = _min_tlbr > 0 # (ac, N)
+    mask_scale = (_max_tlbr>=centre_minmax[:,None,0])&(_max_tlbr<=centre_minmax[:,None,1]) # (ac, N)
+    mask_pos = mask_inside & mask_scale # (ac, N)
+    mask_neg_1d = ~torch.max(mask_pos, dim=1)[0] # (ac)
 
-    _max[~mask_inside] = 1e8
-    _max_min_index = torch.min(_max, dim=1)[1] # (ac)
-    
-    targets_cls = label_class[_max_min_index] # (ac)
-    targets_cls[neg_mask] = 0
+    area[~mask_pos] = inf
+    _min_area_index_1d = torch.min(area, dim=1)[1] # (ac)
 
-    _label_box = label_box[_max_min_index]
+    # cls
+    targets_cls = label_class[_min_area_index_1d] # (ac)
+    targets_cls[mask_neg_1d] = 0
+
+    # reg
+    _label_box = label_box[_min_area_index_1d]
     _tl = centre_yx[:, :] - _label_box[:, 0:2] # (ac, 2)
     _br = _label_box[:, 2:4] - centre_yx[:, :] # (ac, 2)
-    _tlbr = torch.cat([_tl, _br], dim=1) # (ac, 4)
+    targets_reg = torch.cat([_tl, _br], dim=1) # (ac, 4)
+    targets_reg[mask_neg_1d] = 1
 
-    targets_reg = _tlbr
-    targets_reg[neg_mask] = 1
-
-    _lr = _tlbr[:, 1::2] # (ac, 2)
-    _tb = _tlbr[:, 0::2] # (ac, 2)
+    # cen
+    _lr = targets_reg[:, 1::2] # (ac, 2)
+    _tb = targets_reg[:, 0::2] # (ac, 2)
     min_lr = torch.min(_lr, dim=1)[0] # (ac)
     max_lr = torch.max(_lr, dim=1)[0] # (ac)
     min_tb = torch.min(_tb, dim=1)[0] # (ac)
     max_tb = torch.max(_tb, dim=1)[0] # (ac)
-    targets_cen = ((min_lr*min_tb+eps)/(max_lr*max_tb+eps)).sqrt()
+    targets_cen = ((min_lr*min_tb)/(max_lr*max_tb+eps)).sqrt()
 
     return targets_cls, targets_cen, targets_reg
 
