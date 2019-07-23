@@ -9,20 +9,20 @@
     "save": true,
     "pretrain": true,
     "freeze_bn": true,
-    "epoch_num": [10,3,2],
+    "epoch_num": [10,4,2],
 
     "nbatch_train": 16,
     "nbatch_eval": 16,
     "device": [1,2,3,5,6,7,8,9],
     "num_workers": 16,
-
+    
     "lr": 0.01,
     "lr_decay": 0.1,
     "momentum": 0.9,
     "weight_decay": 0.0001,
 
     "boxarea_th": 25,
-    "img_scale_min": 0.7,
+    "img_scale_min": 0.8,
     "crop_scale_min": 0.4,
     "aspect_ratio": [0.750, 1.333],
     "remain_min": 0.8,

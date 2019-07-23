@@ -146,22 +146,26 @@ class Detector(nn.Module):
             targets_reg = targets_reg.view(-1, 4)
             targets_cen = targets_cen.view(-1)
             loss_cls_1 = sigmoid_focal_loss(cls_out, targets_cls, 2.0, 0.25)
+            loss_cls_1 = torch.sum(loss_cls_1).view(1)
             mask_reg = targets_cls > 0 # (S+)
             reg_out = reg_out[mask_reg] # (S+, 4)
             targets_reg = targets_reg[mask_reg] # # (S+, 4)
             cen_out = cen_out[mask_reg]
             targets_cen = targets_cen[mask_reg]
-            return (loss_cls_1, mask_reg, reg_out, targets_reg, cen_out, targets_cen)
+            loss_reg = F.smooth_l1_loss(reg_out, targets_reg, reduction='sum').view(1)
+            loss_cen = F.binary_cross_entropy_with_logits(cen_out, targets_cen, reduction='sum').view(1)
+            num_pos = torch.sum(mask_reg).view(1)
+            return (loss_cls_1, loss_reg, loss_cen, num_pos)
 
 
 
 def get_loss(temp):
-    loss_cls_1, mask_reg, reg_out, targets_reg, cen_out, targets_cen = temp
+    loss_cls_1, loss_reg, loss_cen, num_pos = temp
     loss_cls = torch.sum(loss_cls_1)
-    num_pos = float(torch.sum(mask_reg))
+    loss_reg = torch.sum(loss_reg)
+    loss_cen = torch.sum(loss_cen)
+    num_pos = float(torch.sum(num_pos))
     if num_pos <= 0:
         num_pos = 1.0
-    loss_reg = F.smooth_l1_loss(reg_out, targets_reg, reduction='sum')
-    loss_cen = F.binary_cross_entropy_with_logits(cen_out, targets_cen, reduction='sum')
     loss = (loss_cls + loss_reg + loss_cen) / num_pos
     return loss
