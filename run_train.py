@@ -54,13 +54,18 @@ encoder = Encoder(
     net.module.max_detections)
 
 
+opt = torch.optim.SGD(net.parameters(), lr=lr, 
+            momentum=cfg['momentum'], weight_decay=cfg['weight_decay'])
+
+
 epoch = 0
 for epoch_num in cfg['epoch_num']:
 
-    for e in range(epoch_num):
+    for param_group in opt.param_groups:
+        param_group['lr'] = lr
 
-        opt = torch.optim.SGD(net.parameters(), lr=lr, 
-            momentum=cfg['momentum'], weight_decay=cfg['weight_decay'])
+    for e in range(epoch_num):
+        
         if cfg['freeze_bn']:
             net.module.backbone.freeze_bn()
 
@@ -75,8 +80,9 @@ for epoch_num in cfg['epoch_num']:
             if clip > 0:
                 torch.nn.utils.clip_grad_norm_(net.parameters(), clip)
             opt.step()
-            print('epoch:%d, step:%d/%d, loss:%f' % \
-                (epoch, i*cfg['nbatch_train'], len(dataset_train), loss))
+            maxmem = int(torch.cuda.max_memory_allocated(device=cfg['device'][0]) / 1024 / 1024)
+            print('epoch:%d, step:%d/%d, loss:%f, maxMem: %dMB' % \
+                (epoch, i*cfg['nbatch_train'], len(dataset_train), loss, maxmem))
         
         # Eval
         with torch.no_grad():
@@ -127,4 +133,5 @@ for epoch_num in cfg['epoch_num']:
                 np.save('log.npy', log)
          
         epoch += 1
+
     lr *= lr_decay
