@@ -1,48 +1,7 @@
 import torch
 import  utils_box.units as units
+from libs.nms import box_nms
 # TODO: define Encoder
-
-
-
-def box_nms(bboxes, scores, threshold=0.5, mode='union', eps=1e-10):
-    '''
-    Param:
-    bboxes: FloatTensor(n,4) # 4: ymin, xmin, ymax, xmax
-    scores: FloatTensor(n)
-    mode:   'union' or 'min'
-
-    Return:
-    LongTensor(S) # index of keep boxes
-    '''
-    ymin, xmin, ymax, xmax = bboxes[:,0], bboxes[:,1], bboxes[:,2], bboxes[:,3]
-    areas = (xmax-xmin+eps) * (ymax-ymin+eps)
-    order = scores.sort(0, descending=True)[1]
-    keep = []
-
-    while order.numel() > 0:
-        i = order[0] 
-        keep.append(i)
-        if order.numel() == 1:
-            break
-        _ymin = ymin[order[1:]].clamp(min=float(ymin[i]))
-        _xmin = xmin[order[1:]].clamp(min=float(xmin[i]))
-        _ymax = ymax[order[1:]].clamp(max=float(ymax[i]))
-        _xmax = xmax[order[1:]].clamp(max=float(xmax[i]))
-        _h = (_ymax-_ymin+eps).clamp(min=0)
-        _w = (_xmax-_xmin+eps).clamp(min=0)
-        inter = _h * _w
-        if mode == 'union':
-            ovr = inter / (areas[i] + areas[order[1:]] - inter)
-        elif mode == 'min':
-            ovr = inter / areas[order[1:]].clamp(max=float(areas[i]))
-        else:
-            raise TypeError('Unknown nms mode: %s.' % mode)
-        ids = (ovr<=threshold).nonzero().squeeze() + 1
-        if ids.numel() == 0:
-            break
-        order = torch.index_select(order, 0, ids)
-    return torch.LongTensor(keep)
-
 
 
 class Encoder:
@@ -108,6 +67,7 @@ class Encoder:
                 targets_cls_b, targets_cen_b, targets_reg_b = units.get_output(
                     self.train_centre_yx, self.train_centre_minmax, 
                     label_class[b], label_box[b]) # (pos), (pos, 4)
+                targets_reg_b /= self.train_centre_minmax[:, 1:2]
                 targets_reg_b = targets_reg_b.log()
 
             targets_cls.append(targets_cls_b)
@@ -159,7 +119,7 @@ class Encoder:
 
         reg_preds = []
         for b in range(cls_out.shape[0]):
-            tlbr = reg_out[b].exp() # (s, 4)
+            tlbr = reg_out[b].exp() * self.eval_centre_minmax[:, 1:2] # (s, 4)
             tl, br = tlbr.split([2, 2], dim=1) # (s, 2)
             ymin_xmin = self.eval_centre_yx - tl
             ymax_xmax = self.eval_centre_yx + br
