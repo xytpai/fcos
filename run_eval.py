@@ -13,13 +13,16 @@ with open('train.json', 'r') as load_f:
 net = Detector(pretrained=False)
 
 
-# TODO: 
+
+# TODO: ============================
 # net.nms_th = 0.05
 cfg['device'] = [0,1,2,3,9]
 cfg['nbatch_eval'] = 30
-###############
+# ==================================
 
 
+
+encoder = Encoder(net)
 device_out = 'cuda:%d' % (cfg['device'][0])
 net.load_state_dict(torch.load('net.pkl', map_location=device_out))
 net = torch.nn.DataParallel(net, device_ids=cfg['device'])
@@ -34,17 +37,6 @@ dataset_eval = Dataset_CSV(cfg['root_eval'], cfg['list_eval'], cfg['name_file'],
     size=net.module.eval_size, train=False, transform=transform)
 loader_eval = torch.utils.data.DataLoader(dataset_eval, batch_size=cfg['nbatch_eval'], 
                     shuffle=False, num_workers=0, collate_fn=dataset_eval.collate_fn)
-
-
-encoder = Encoder(
-    net.module.regions,
-    net.module.first_stride,
-    net.module.train_size, 
-    net.module.eval_size,
-    net.module.nms, 
-    net.module.nms_th, 
-    net.module.nms_iou,
-    net.module.max_detections)
 
 
 # Eval
@@ -95,4 +87,3 @@ with torch.no_grad():
     print(map_75)
     print('ap@.5')
     print(ap_res[0]['ap'])
-

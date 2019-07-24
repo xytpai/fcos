@@ -13,6 +13,9 @@ with open('train.json', 'r') as load_f:
 
 
 net = Detector(pretrained=cfg['pretrain'])
+encoder = Encoder(net)
+
+
 log = []
 device_out = 'cuda:%d' % (cfg['device'][0])
 if cfg['load']:
@@ -43,15 +46,6 @@ loader_eval = torch.utils.data.DataLoader(dataset_eval, batch_size=cfg['nbatch_e
 
 lr = cfg['lr']
 lr_decay = cfg['lr_decay']
-encoder = Encoder(
-    net.module.regions,
-    net.module.first_stride,
-    net.module.train_size, 
-    net.module.eval_size,
-    net.module.nms, 
-    net.module.nms_th, 
-    net.module.nms_iou,
-    net.module.max_detections)
 
 
 opt = torch.optim.SGD(net.parameters(), lr=lr, 

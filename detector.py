@@ -24,7 +24,7 @@ class Detector(nn.Module):
         self.nms_iou = 0.5
         self.max_detections = 1000
         # ---------------------------
-
+        
         self.backbone = backbone(pretrained=pretrained)
 
         self.relu = nn.ReLU(inplace=True)

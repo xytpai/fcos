@@ -8,19 +8,26 @@ from encoder import Encoder
 from detector import Detector
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
+import os
 
 
+
+# TODO: ============================
 coco_table_file = 'data/coco_table.json'
 coco_anno_root = '/home1/xyt/dataset/coco17/'
 set_name = 'val2017'
+# ==================================
+
 
 
 with open(coco_table_file, 'r') as load_f:
     coco_table = json.load(load_f)
-
 with open('train.json', 'r') as load_f:
     cfg = json.load(load_f)
+
+
 net = Detector(pretrained=False)
+encoder = Encoder(net)
 
 
 device_out = 'cuda:%d' % (cfg['device'][0])
@@ -35,17 +42,6 @@ transform = transforms.Compose([
     transforms.Normalize((0.485,0.456,0.406), (0.229,0.224,0.225))])
 dataset_eval = Dataset_CSV(cfg['root_eval'], cfg['list_eval'], cfg['name_file'], 
     size=net.module.eval_size, train=False, transform=transform)
-
-
-encoder = Encoder(
-    net.module.regions,
-    net.module.first_stride,
-    net.module.train_size, 
-    net.module.eval_size,
-    net.module.nms, 
-    net.module.nms_th, 
-    net.module.nms_iou,
-    net.module.max_detections)
 
 
 # Eval

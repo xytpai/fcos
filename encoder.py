@@ -4,25 +4,18 @@ from libs.nms import box_nms
 # TODO: define Encoder
 
 
-class Encoder:
-    def __init__(self, 
-        regions = [0, 64, 128, 256, 512, 1024],
-        first_stride = 8,
-        train_size = 641, 
-        eval_size = 641,
-        nms = True, 
-        nms_th = 0.05, 
-        nms_iou = 0.5,
-        max_detections = 1000):
 
-        self.regions = regions
-        self.first_stride = first_stride
-        self.train_size = train_size
-        self.eval_size = eval_size
-        self.nms = nms
-        self.nms_th = nms_th
-        self.nms_iou = nms_iou
-        self.max_detections = max_detections
+class Encoder:
+    def __init__(self, detector):
+
+        self.regions = detector.regions
+        self.first_stride = detector.first_stride
+        self.train_size = detector.train_size
+        self.eval_size = detector.eval_size
+        self.nms = detector.nms
+        self.nms_th = detector.nms_th
+        self.nms_iou = detector.nms_iou
+        self.max_detections = detector.max_detections
 
         self.train_centre_yx, self.train_centre_minmax = \
             units.get_centre(self.train_size, self.first_stride, self.regions)
