@@ -158,6 +158,18 @@ class ResNet(nn.Module):
         for layer in self.modules():
             if isinstance(layer, nn.BatchNorm2d):
                 layer.eval()
+    
+    def freeze_stages(self, stage):
+        if stage >= 0:
+            self.bn1.eval()
+            for m in [self.conv1, self.bn1]:
+                for param in m.parameters():
+                    param.requires_grad = False
+        for i in range(1, stage + 1):
+            layer = getattr(self, 'layer{}'.format(i))
+            layer.eval()
+            for param in layer.parameters():
+                param.requires_grad = False
 
 
 def resnet18(pretrained=False, **kwargs):

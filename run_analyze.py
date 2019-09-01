@@ -18,7 +18,11 @@ plt.plot(map_50, color='b', label='map_50')
 plt.plot(map_75, color='g', label='map_75')
 plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
                ncol=3, mode='expand', borderaxespad=0.)
-               
+
+map_mean = np.around(map_mean, decimals=4)
+map_50 = np.around(map_50, decimals=4)
+map_75 = np.around(map_75, decimals=4)
+
 print('map_mean')
 print(map_mean)
 print('map_50')

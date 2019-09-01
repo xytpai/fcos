@@ -4,7 +4,7 @@ import glob
 from torch.utils.cpp_extension import BuildExtension, CUDAExtension
 
 setup(
-    name='sigmoid_focal_loss',
+    name='sigmoid_focal_loss_cuda',
     ext_modules=[
         CUDAExtension(
             'sigmoid_focal_loss_cuda', 
