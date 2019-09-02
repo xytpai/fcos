@@ -228,11 +228,12 @@ class Detector(nn.Module):
         return torch.stack(targets_cen), torch.stack(targets_cls), torch.stack(targets_reg)
     
 
-    def _decode(self, cls_out, reg_out, loc):
+    def _decode(self, cen_out, cls_out, reg_out, loc):
         '''
         Param:
-        cls_out: FloatTensor(batch_num, hwan, classes)
-        reg_out: FloatTensor(batch_num, hwan, 4)
+        cen_out: FloatTensor(batch_num, shw, 1)
+        cls_out: FloatTensor(batch_num, shw, classes)
+        reg_out: FloatTensor(batch_num, shw, 4)
         loc:     FloatTensor(batch_num, 4)
         
         Return:
@@ -240,30 +241,23 @@ class Detector(nn.Module):
         cls_p_preds: FloatTensor(batch_num, topk)
         reg_preds:   FloatTensor(batch_num, topk, 4)
         '''
-        cls_p_preds, cls_i_preds = torch.max(cls_out.sigmoid(), dim=2)
+        cen_out = cen_out.sigmoid().view(cen_out.shape[0], cen_out.shape[1]) # (b, shw)
+        cls_p_preds, cls_i_preds = torch.max(cls_out.sigmoid(), dim=2) # (b, shw)
+        cls_p_preds = cls_p_preds * cen_out
         cls_i_preds = cls_i_preds + 1
         reg_preds = []
         for b in range(cls_out.shape[0]):
             # box transform
-            # Method 1
-            reg_dyxyx = reg_out[b]
-            reg_dyxyx[:, :2] = reg_dyxyx[:, :2] * self.view_anchors_hw
-            reg_dyxyx[:, 2:] = reg_dyxyx[:, 2:] * self.view_anchors_hw
-            reg_yxyx = reg_dyxyx + self.view_anchors_yxyx
-            reg_preds.append(reg_yxyx)
-            # Method 2
-            # reg_pyxhw = reg_out[b]
-            # lb_yx = reg_pyxhw[:, :2] * self.view_anchors_hw + self.view_anchors_yx
-            # lb_hw = (reg_pyxhw[:, 2:]).exp() * self.view_anchors_hw
-            # lb_ymin_xmin = lb_yx - lb_hw / 2.0
-            # lb_ymax_xmax = lb_yx + lb_hw / 2.0 - 1
-            # reg_preds.append(torch.cat([lb_ymin_xmin, lb_ymax_xmax], dim=1))
+            reg_tlbr = reg_out[b].exp() # (shw, 4)
+            reg_yx0 = self.view_anchors_yx - reg_tlbr[:, :2]
+            reg_yx1 = self.view_anchors_yx + reg_tlbr[:, 2:]
+            reg_preds.append(torch.cat([reg_yx0, reg_yx1], dim=1))
             # ignore
             cd1 = self.view_anchors_yx - loc[b, :2]
             cd2 = loc[b, 2:] - self.view_anchors_yx
             mask = (cd1.min(dim=1)[0] < 0) | (cd2.min(dim=1)[0] < 0)
             cls_p_preds[b, mask] = 0
-        reg_preds = torch.stack(reg_preds)
+        reg_preds = torch.stack(reg_preds) # (b, shw)
         # topk
         nms_maxnum = min(int(self.max_detections), int(cls_p_preds.shape[1]))
         select = torch.topk(cls_p_preds, nms_maxnum, largest=True, dim=1)[1]
