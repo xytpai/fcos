@@ -2,7 +2,7 @@ import math
 import torch 
 import torch.nn as nn 
 import torch.nn.functional as F 
-from fcos_anchors import gen_anchors, gen_targets
+from fcos_anchors import gen_anchors
 from libs.sigmoid_focal_loss import sigmoid_focal_loss
 from libs.smooth_l1_loss import smooth_l1_loss
 from libs.nms import box_nms 
