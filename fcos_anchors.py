@@ -38,3 +38,19 @@ def gen_anchors(img_size, first_stride, regions):
         center_minmax.append(center_minmax_i)
     return torch.cat(center_yx, dim=0), torch.cat(center_minmax, dim=0)
 
+
+
+def distance2bbox(points, distance):
+    '''
+    Param:
+    points:   FloatTensor(n, 2)  2: y x
+    distance: FloatTensor(n, 4)  4: top left bottom right
+
+    Return:
+    FloatTensor(n, 4) 4: ymin xmin ymax xmax
+    '''
+    ymin = points[:, 0] - distance[:, 0]
+    xmin = points[:, 1] - distance[:, 1]
+    ymax = points[:, 0] + distance[:, 2]
+    xmax = points[:, 1] + distance[:, 3]
+    return torch.stack([ymin, xmin, ymax, xmax], -1)

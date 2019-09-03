@@ -2,9 +2,9 @@ import math
 import torch 
 import torch.nn as nn 
 import torch.nn.functional as F 
-from fcos_anchors import gen_anchors
+from fcos_anchors import gen_anchors, distance2bbox
 from libs.sigmoid_focal_loss import sigmoid_focal_loss
-from libs.smooth_l1_loss import smooth_l1_loss
+from libs.iou_loss import iou_loss
 from libs.nms import box_nms 
 # TODO: choose backbone
 from backbone import resnet50 as backbone
@@ -129,7 +129,7 @@ class Detector(nn.Module):
         reg_out = []
         for i, item in enumerate(pred_list):
             cls_i = self.conv_cls(item)
-            reg_i = self.conv_reg(item) * self.scale_div[i]
+            reg_i = (self.conv_reg(item) * self.scale_div[i]).exp()
             # cls_i: [b, 1 + classes, H, W] -> [b, H*W, 1 + classes]
             cls_i = cls_i.permute(0,2,3,1).contiguous()
             cls_i = cls_i.view(cls_i.shape[0], -1, 1 + self.classes)
@@ -164,7 +164,9 @@ class Detector(nn.Module):
                 targets_reg_b = targets_reg[b][mask_reg[b]] # (S+, 4)
                 loss_cen_b = F.binary_cross_entropy_with_logits(cen_out_b, targets_cen_b, reduction='sum').view(1)
                 loss_cls_b = sigmoid_focal_loss(cls_out_b, targets_cls_b, 2.0, 0.25).sum().view(1)
-                loss_reg_b = smooth_l1_loss(reg_out_b, targets_reg_b, 0.11).sum().view(1)
+                reg_out_b = distance2bbox(self.view_anchors_yx, reg_out_b)
+                targets_reg_b = distance2bbox(self.view_anchors_yx, targets_reg_b)
+                loss_reg_b = iou_loss(reg_out_b, targets_reg_b).sum().view(1)
                 loss.append((loss_cen_b + loss_cls_b + loss_reg_b) / float(num_pos[b])) 
             return torch.cat(loss, dim=0) # (b)
         else:
@@ -213,9 +215,6 @@ class Detector(nn.Module):
             min_tb = torch.min(_tb, dim=1)[0] # (shw)
             max_tb = torch.max(_tb, dim=1)[0] # (shw)
             targets_cen_b = ((min_lr*min_tb)/(max_lr*max_tb+1e-10)).sqrt()
-            # targets_reg_b.log()
-            targets_reg_b[targets_reg_b<=0] = 1e-10
-            targets_reg_b = targets_reg_b.log()
             # ignore
             cd1 = self.view_anchors_yx - loc[b, :2]
             cd2 = loc[b, 2:] - self.view_anchors_yx
@@ -248,10 +247,9 @@ class Detector(nn.Module):
         reg_preds = []
         for b in range(cls_out.shape[0]):
             # box transform
-            reg_tlbr = reg_out[b].exp() # (shw, 4)
-            reg_yx0 = self.view_anchors_yx - reg_tlbr[:, :2]
-            reg_yx1 = self.view_anchors_yx + reg_tlbr[:, 2:]
-            reg_preds.append(torch.cat([reg_yx0, reg_yx1], dim=1))
+            reg_tlbr = reg_out[b] # (shw, 4)
+            reg_yxyx = distance2bbox(self.view_anchors_yx, reg_tlbr) # (shw, 4)
+            reg_preds.append(reg_yxyx)
             # ignore
             cd1 = self.view_anchors_yx - loc[b, :2]
             cd2 = loc[b, 2:] - self.view_anchors_yx
