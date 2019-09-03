@@ -156,6 +156,8 @@ class Detector(nn.Module):
             num_pos = torch.sum(mask_reg, dim=1).clamp_(min=1) # (b)
             loss = []
             for b in range(targets_cls.shape[0]):
+                reg_out[b] = distance2bbox(self.view_anchors_yx, reg_out[b])
+                targets_reg[b] = distance2bbox(self.view_anchors_yx, targets_reg[b])
                 cen_out_b = cen_out[b][mask_reg[b]].view(-1) # (S+)
                 cls_out_b = cls_out[b][mask_cls[b]] # (S+-, classes)
                 reg_out_b = reg_out[b][mask_reg[b]] # (S+, 4)
@@ -164,8 +166,6 @@ class Detector(nn.Module):
                 targets_reg_b = targets_reg[b][mask_reg[b]] # (S+, 4)
                 loss_cen_b = F.binary_cross_entropy_with_logits(cen_out_b, targets_cen_b, reduction='sum').view(1)
                 loss_cls_b = sigmoid_focal_loss(cls_out_b, targets_cls_b, 2.0, 0.25).sum().view(1)
-                reg_out_b = distance2bbox(self.view_anchors_yx, reg_out_b)
-                targets_reg_b = distance2bbox(self.view_anchors_yx, targets_reg_b)
                 loss_reg_b = iou_loss(reg_out_b, targets_reg_b).sum().view(1)
                 loss.append((loss_cen_b + loss_cls_b + loss_reg_b) / float(num_pos[b])) 
             return torch.cat(loss, dim=0) # (b)
