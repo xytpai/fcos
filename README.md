@@ -5,6 +5,12 @@ FCOS: Fully Convolutional One-Stage Object Detection.
 
 https://arxiv.org/abs/1904.01355
 
+| paper (800px) | ours (nearly 700px) |
+| :--: | :--: |
+| 36.6 | **35.6** |
+
+![](images/pred_demo.bmp)
+
 
 
 ## 1. COCO (1x)
@@ -81,5 +87,50 @@ Run cocoeval and got mAP: **33.6%**
  Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.253
  Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.498
  Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.575
+```
+
+
+
+## 2. COCO (2x)
+
+Like 2 in *train.json* modify key
+
+```json
+"epoches": 24,
+"lr_schedule": [120000, 160000],
+```
+
+Run train to get results. It takes about 40 hours with 8x Titan-Xp. Run analyze to get mAP curves.
+
+```python
+map_mean
+[0.102  0.1695 0.2081 0.2324 0.2392 0.2428 0.2513 0.2599 0.2659 0.263
+ 0.2705 0.2787 0.2763 0.2753 0.2883 0.2942 0.3457 0.3487 0.3494 0.3502
+ 0.353  0.3547 0.3552 0.3547]
+map_50
+[0.1956 0.3047 0.3625 0.3881 0.3935 0.4019 0.4087 0.4301 0.4218 0.4165
+ 0.4315 0.4455 0.4466 0.4397 0.4552 0.459  0.5234 0.5266 0.5275 0.5294
+ 0.5316 0.5326 0.5346 0.5337]
+map_75
+[0.0965 0.1715 0.2123 0.2396 0.2498 0.2516 0.2627 0.2707 0.2789 0.2798
+ 0.2866 0.2941 0.2957 0.292  0.3046 0.3114 0.3696 0.3713 0.3743 0.3735
+ 0.3779 0.3801 0.3805 0.3794]
+```
+
+Run cocoeval and got mAP: **35.6%**
+
+```python
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.356
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.537
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.380
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.192
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.395
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.471
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.294
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.447
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.467
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.269
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.518
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.591
 ```
 
