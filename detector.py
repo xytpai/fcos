@@ -22,7 +22,7 @@ class Detector(nn.Module):
         self.view_size = 1025
         self.classes = 80
         self.nms_th = 0.05
-        self.nms_iou = 0.5
+        self.nms_iou = 0.6
         self.max_detections = 3000
         # ---------------------------
 
