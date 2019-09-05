@@ -29,7 +29,7 @@ class Detector(nn.Module):
         # fpn =======================================================
         self.backbone = backbone(pretrained=pretrained)
         self.relu = nn.ReLU(inplace=True)
-        self.conv_out6 = nn.Conv2d(2048, 256, kernel_size=3, padding=1, stride=2)
+        self.conv_out6 = nn.Conv2d(256, 256, kernel_size=3, padding=1, stride=2)
         self.conv_out7 = nn.Conv2d(256, 256, kernel_size=3, padding=1, stride=2)
         self.prj_5 = nn.Conv2d(2048, 256, kernel_size=1)
         self.prj_4 = nn.Conv2d(1024, 256, kernel_size=1)
@@ -119,7 +119,7 @@ class Detector(nn.Module):
         P4 = self.conv_4(P4)
         P5 = self.conv_5(P5)
 
-        P6 = self.conv_out6(C5)
+        P6 = self.conv_out6(P5)
         P7 = self.conv_out7(self.relu(P6))
 
         pred_list = [P3, P4, P5, P6, P7]
