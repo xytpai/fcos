@@ -62,31 +62,31 @@ Run analyze to get mAP curves.
 
 ```python
 map_mean
-[0.0938 0.1693 0.2172 0.2306 0.2406 0.2413 0.2667 0.2587 0.3238 0.328
- 0.3325 0.3338]
+[0.0956 0.1589 0.2083 0.2308 0.2433 0.2537 0.2599 0.2621 0.3241 0.3315
+ 0.3376 0.3378]
 map_50
-[0.173  0.3071 0.3645 0.3802 0.3982 0.4032 0.4265 0.4241 0.4998 0.5053
- 0.5108 0.5126]
+[0.1846 0.3076 0.3512 0.3832 0.3959 0.4021 0.4182 0.4164 0.4978 0.5068
+ 0.5135 0.5142]
 map_75
-[0.0921 0.1708 0.2242 0.2393 0.2537 0.2519 0.2828 0.2723 0.3409 0.3455
- 0.3502 0.3527]
+[0.0894 0.1555 0.2187 0.2415 0.2569 0.2695 0.2793 0.2803 0.3443 0.3545
+ 0.3602 0.3606]
 ```
 
-Run cocoeval and got mAP: **33.6%**
+Run cocoeval and got mAP: **34.0%**
 
 ```python
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.336
- Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.516
- Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.355
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.180
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.371
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.443
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.280
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.429
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.450
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.253
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.498
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.575
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.340
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.518
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.362
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.182
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.377
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.456
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.282
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.438
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.465
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.258
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.517
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.593
 ```
 
 
