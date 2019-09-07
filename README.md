@@ -100,7 +100,7 @@ Like 2 in *train.json* modify key
 "lr_schedule": [120000, 160000],
 ```
 
-Run train to get results. It takes about 40 hours with 8x Titan-Xp. Run analyze to get mAP curves.
+Run train to get results. It takes about 28 hours with 8x Titan-Xp. Run analyze to get mAP curves.
 
 ```python
 map_mean
