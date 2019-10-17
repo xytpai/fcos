@@ -1,21 +1,34 @@
 # FCOS in Pytorch
 
-An unofficial implementation of FCOS in pytorch. 
+An unofficial implementation of FCOS in Pytorch. 
 FCOS: Fully Convolutional One-Stage Object Detection.
 
 https://arxiv.org/abs/1904.01355
 
-| paper (800px) | ours (nearly 700px) |
-| :--: | :--: |
-| 36.6 | **35.9** |
+**Some modifies are adopted:**
+
+- Remove *center-ness* branch for simplicity.
+- Add center sample mechanism to improve performance.
+
+| paper (800px) | official (800px) | ours (nearly 700px) |
+| :--: | :--: | :--: | ---- |
+| 36.6 | 38.7 | **xxx** ||
 
 ![](images/pred_demo.bmp)
 
 
+Some *cuda* operations are provided for acceleration. 
 
-## 1. COCO (1x)
+```bash
+cd libs/nms_cuda
+python setup.py install
+cd libs/sigmoid_focal_loss_cuda.py
+python setup.py install
+```
 
-First, configure train.json file, add your root. 
+## COCO (2x)
+
+Configure train.json file, add your root. 
 
 ```json
 {
@@ -30,7 +43,7 @@ First, configure train.json file, add your root.
     "pretrain": true,
     "freeze_bn": true,
     "freeze_stages": 1,
-    "epoches": 12,
+    "epoches": 24,
 
     "nbatch_train": 16,
     "nbatch_eval": 16,
@@ -39,7 +52,7 @@ First, configure train.json file, add your root.
     
     "lr_base": 0.01,
     "lr_gamma": 0.1,
-    "lr_schedule": [60000, 80000],
+    "lr_schedule": [120000, 160000],
     "momentum": 0.9,
     "weight_decay": 0.0001,
 
@@ -51,86 +64,38 @@ First, configure train.json file, add your root.
 }
 ```
 
-Then, configure some parameters in *detector.py* file.
+Command: *python run_train.py*  to start schedule, it takes about 30 hours with 8x Titan-XP.
 
-```python
-self.view_size = 1025
-self.classes = 80   # TODO: total 80 classes exclude background
-```
-
-Run analyze to get mAP curves.
+Command: *python run_analyze.py*  to get mAP curves.
 
 ```python
 map_mean
-[0.0956 0.1589 0.2083 0.2308 0.2433 0.2537 0.2599 0.2621 0.3241 0.3315
- 0.3376 0.3378]
+[0.1291 0.1895 0.2261 0.2421 0.2528 0.2578 0.2731 0.2778 0.2769 0.2809
+ 0.2946 0.2913 0.2971 0.2916 0.2961 0.3052 0.3559 0.3587 0.3584 0.3645
+ 0.366  0.3679 0.3683 0.3684]
 map_50
-[0.1846 0.3076 0.3512 0.3832 0.3959 0.4021 0.4182 0.4164 0.4978 0.5068
- 0.5135 0.5142]
+[0.2468 0.3396 0.381  0.4007 0.4187 0.4281 0.4404 0.4444 0.4438 0.45
+ 0.46   0.4642 0.4665 0.4651 0.4659 0.4779 0.5373 0.54   0.539  0.546
+ 0.5461 0.548  0.5485 0.5489]
 map_75
-[0.0894 0.1555 0.2187 0.2415 0.2569 0.2695 0.2793 0.2803 0.3443 0.3545
- 0.3602 0.3606]
+[0.1235 0.1929 0.2335 0.2541 0.2687 0.2672 0.2902 0.2892 0.2941 0.2993
+ 0.3148 0.3096 0.3147 0.3098 0.316  0.325  0.3771 0.3817 0.3808 0.3892
+ 0.3914 0.3937 0.3952 0.3952]
 ```
 
-Run cocoeval and got mAP: **34.0%**
+Command: *python run_cocoeval.py*  to get mAP.
 
 ```python
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.340
- Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.518
- Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.362
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.182
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.377
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.456
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.282
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.438
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.465
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.258
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.517
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.593
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.371
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.554
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.397
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.198
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.408
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.483
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.302
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.481
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.524
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.328
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.573
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.630
 ```
-
-
-
-## 2. COCO (2x)
-
-Like 2 in *train.json* modify key
-
-```json
-"epoches": 24,
-"lr_schedule": [120000, 160000],
-```
-
-Run train to get results. It takes about 28 hours with 8x Titan-Xp. Run analyze to get mAP curves.
-
-```python
-map_mean
-[0.102  0.1695 0.2081 0.2324 0.2392 0.2428 0.2513 0.2599 0.2659 0.263
- 0.2705 0.2787 0.2763 0.2753 0.2883 0.2942 0.3457 0.3487 0.3494 0.3502
- 0.353  0.3547 0.3552 0.3547]
-map_50
-[0.1956 0.3047 0.3625 0.3881 0.3935 0.4019 0.4087 0.4301 0.4218 0.4165
- 0.4315 0.4455 0.4466 0.4397 0.4552 0.459  0.5234 0.5266 0.5275 0.5294
- 0.5316 0.5326 0.5346 0.5337]
-map_75
-[0.0965 0.1715 0.2123 0.2396 0.2498 0.2516 0.2627 0.2707 0.2789 0.2798
- 0.2866 0.2941 0.2957 0.292  0.3046 0.3114 0.3696 0.3713 0.3743 0.3735
- 0.3779 0.3801 0.3805 0.3794]
-```
-
-Run cocoeval and got mAP: **35.9%**
-
-```python
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.359
- Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.537
- Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.385
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.194
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.399
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.474
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.296
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.457
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.483
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.278
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.535
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.611
-```
-

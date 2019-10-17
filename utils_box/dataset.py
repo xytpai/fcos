@@ -189,26 +189,60 @@ def random_resize_fix(img, boxes, size, img_scale_min):
 
 
 
-def show_bbox(img, boxes, labels, NAME_TAB, file_name=None, matplotlib=False):
+COLOR_TABLE = [
+    'Red', 'Green', 'Blue', 'Yellow',
+    'Purple', 'Orange', 'DarkGreen', 'Purple',
+    'White', 'YellowGreen', 'Maroon', 'Teal',
+    'DarkGoldenrod', 'Peru', 'DarkRed', 'Tan',
+    'AliceBlue', 'LightBlue', 'Cyan', 'Teal',
+    'SpringGreen', 'SeaGreen', 'Lime', 'DarkGreen',
+    'YellowGreen', 'Ivory', 'Olive', 'DarkGoldenrod',
+    'Orange', 'Tan', 'Peru', 'Seashell',
+    'Coral', 'RosyBrown', 'Maroon', 'DarkRed',
+    'WhiteSmoke', 'LightGrey', 'Gray'
+] * 10
+
+
+
+def draw_bbox_text(drawObj, ymin, xmin, ymax, xmax, text, color, bd=8):
+    drawObj.rectangle((xmin, ymin, xmax, ymin+bd), fill=color)
+    drawObj.rectangle((xmin, ymax-bd, xmax, ymax), fill=color)
+    drawObj.rectangle((xmin, ymin, xmin+bd, ymax), fill=color)
+    drawObj.rectangle((xmax-bd, ymin, xmax, ymax), fill=color)
+    strlen = len(text)
+    drawObj.rectangle((xmin, ymin, xmin+strlen*6+5, ymin+12), fill=color)
+    drawObj.text((xmin+3, ymin), text)
+
+
+
+def show_bbox(img, boxes, labels, NAME_TAB, file_name=None, scores=None, 
+                matplotlib=False, lb_g=True):
     '''
     img:      FloatTensor(3, H, W)
     boxes:    FloatTensor(N, 4)
     labels:   LongTensor(N)
     NAME_TAB: ['background', 'class_1', 'class_2', ...]
     file_name: 'out.bmp' or None
+    scores:   FloatTensor(N)
     '''
+    if lb_g: bg_idx = 0
+    else: bg_idx = -1
     if not isinstance(img, Image.Image):
         img = transforms.ToPILImage()(img)
     drawObj = ImageDraw.Draw(img)
     for box_id in range(boxes.shape[0]):
         lb = int(labels[box_id])
-        if lb > 0:
+        if lb > bg_idx:
             box = boxes[box_id]
-            if NAME_TAB is not None:
-                strlen = len(NAME_TAB[lb])
-                drawObj.rectangle((box[1],box[0],box[1]+strlen*6,box[0]+12), fill='blue')
-                drawObj.text((box[1],box[0]), NAME_TAB[lb])
-            drawObj.rectangle((box[1],box[0],box[3],box[2]), outline='red')
+            # if NAME_TAB is not None:
+            if scores is None:
+                draw_bbox_text(drawObj, box[0], box[1], box[2], box[3], NAME_TAB[lb], 
+                    color=COLOR_TABLE[lb])
+            else:
+                str_score = str(float(scores[box_id]))[:5]
+                str_out = NAME_TAB[lb] + ': ' + str_score
+                draw_bbox_text(drawObj, box[0], box[1], box[2], box[3], str_out, 
+                    color=COLOR_TABLE[lb])
     if file_name is not None:
         img.save(file_name)
     else:

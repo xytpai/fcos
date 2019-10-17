@@ -2,12 +2,12 @@ import math
 import torch 
 import torch.nn as nn 
 import torch.nn.functional as F 
-from fcos_anchors import gen_anchors, distance2bbox
+from utils_box.anchors import gen_anchors, distance2bbox
 from libs.sigmoid_focal_loss import sigmoid_focal_loss
 from libs.iou_loss import iou_loss
 from libs.nms import box_nms 
 # TODO: choose backbone
-from backbone import resnet50 as backbone
+from backbone import resnet50 as Backbone
 
 
 
@@ -24,12 +24,13 @@ class Detector(nn.Module):
         self.nms_th = 0.05
         self.nms_iou = 0.6
         self.max_detections = 3000
+        self.center_offset_ratio = 1.5
         # ---------------------------
 
         # fpn =======================================================
-        self.backbone = backbone(pretrained=pretrained)
+        self.backbone = Backbone(pretrained=pretrained)
         self.relu = nn.ReLU(inplace=True)
-        self.conv_out6 = nn.Conv2d(256, 256, kernel_size=3, padding=1, stride=2)
+        self.conv_out6 = nn.Conv2d(2048, 256, kernel_size=3, padding=1, stride=2)
         self.conv_out7 = nn.Conv2d(256, 256, kernel_size=3, padding=1, stride=2)
         self.prj_5 = nn.Conv2d(2048, 256, kernel_size=1)
         self.prj_4 = nn.Conv2d(1024, 256, kernel_size=1)
@@ -48,7 +49,7 @@ class Detector(nn.Module):
             nn.ReLU(inplace=True),
             nn.Conv2d(256, 256, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
-            nn.Conv2d(256, 1 + self.classes, kernel_size=3, padding=1)) # centerness + classes
+            nn.Conv2d(256, self.classes, kernel_size=3, padding=1))
         self.conv_reg = nn.Sequential(
             nn.Conv2d(256, 256, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
@@ -76,12 +77,13 @@ class Detector(nn.Module):
         # learnable parameter for scales =====================================
         self.scale_div = nn.Parameter(torch.ones(len(self.regions) - 1))
 
-        # generate anchors ===================================================
-        self._anchors_yx, self._anchors_minmax = \
-            gen_anchors(self.view_size, self.first_stride, self.regions)
-        self.view_shw = self._anchors_yx.shape[0]
-        self.register_buffer('view_anchors_yx', self._anchors_yx)
-        self.register_buffer('view_anchors_minmax', self._anchors_minmax)
+        # generate anchors =================================================== 
+        self._a_center_yx, self._a_tlbr_max_minmax, self._a_center_offset_max = \
+            gen_anchors(self.view_size, self.first_stride, self.regions, self.center_offset_ratio)
+        self.a_shw = self._a_center_yx.shape[0]
+        self.register_buffer('a_center_yx', self._a_center_yx)
+        self.register_buffer('a_tlbr_max_minmax', self._a_tlbr_max_minmax)
+        self.register_buffer('a_center_offset_max', self._a_center_offset_max)
 
 
     def upsample(self, input):
@@ -94,143 +96,129 @@ class Detector(nn.Module):
         Param:
         x:           FloatTensor(batch_num, 3, H, W)
         loc:         FloatTensor(batch_num, 4)
-        label_class: LongTensor(batch_num, N_max) or None
+        label_class: LongTensor (batch_num, N_max) or None
         label_box:   FloatTensor(batch_num, N_max, 4) or None
 
         Return 1:
         loss: FloatTensor(batch_num)
 
         Return 2:
-        cls_i_preds: LongTensor(batch_num, topk)
+        cls_i_preds: LongTensor (batch_num, topk)
         cls_p_preds: FloatTensor(batch_num, topk)
         reg_preds:   FloatTensor(batch_num, topk, 4)
         '''
         
         C3, C4, C5 = self.backbone(x)
-        
         P5 = self.prj_5(C5)
         P4 = self.prj_4(C4)
         P3 = self.prj_3(C3)
-        
         P4 = P4 + self.upsample(P5)
         P3 = P3 + self.upsample(P4)
-
         P3 = self.conv_3(P3)
         P4 = self.conv_4(P4)
         P5 = self.conv_5(P5)
-
-        P6 = self.conv_out6(P5)
+        P6 = self.conv_out6(C5)
         P7 = self.conv_out7(self.relu(P6))
-
         pred_list = [P3, P4, P5, P6, P7]
         assert len(pred_list) == len(self.regions) - 1
-
         cls_out = []
         reg_out = []
         for i, item in enumerate(pred_list):
             cls_i = self.conv_cls(item)
             reg_i = (self.conv_reg(item) * self.scale_div[i]).exp()
-            # cls_i: [b, 1 + classes, H, W] -> [b, H*W, 1 + classes]
             cls_i = cls_i.permute(0,2,3,1).contiguous()
-            cls_i = cls_i.view(cls_i.shape[0], -1, 1 + self.classes)
-            # reg_i: [b, 4, H, W] -> [b, H*W, 4]
             reg_i = reg_i.permute(0,2,3,1).contiguous()
+            cls_i = cls_i.view(cls_i.shape[0], -1, self.classes)
             reg_i = reg_i.view(reg_i.shape[0], -1, 4)
+            # cls_i: [b, classes, H, W] -> [b, H*W, classes]
+            # reg_i: [b, 4, H, W] -> [b, H*W, 4]
             cls_out.append(cls_i)
             reg_out.append(reg_i)
-        
         cls_out = torch.cat(cls_out, dim=1)
         reg_out = torch.cat(reg_out, dim=1)
-        cen_out, cls_out = cls_out.split([1, self.classes], dim=2)
-        # cen_out[b, shw, 1]
         # cls_out[b, shw, classes]
         # reg_out[b, shw, 4]
-        
         if (label_class is not None) and (label_box is not None):
-            # (b, shw), (b, shw), (b, shw, 4)
-            # float     long      float
-            targets_cen, targets_cls, targets_reg = \
-                self._encode(label_class, label_box, loc) 
+            targets_cls, targets_reg = self._encode(label_class, label_box, loc) 
             mask_cls = targets_cls > -1 # (b, shw)
-            mask_reg = targets_cls > 0 # (b, shw)
+            mask_reg = targets_cls > 0  # (b, shw)
             num_pos = torch.sum(mask_reg, dim=1).clamp_(min=1) # (b)
             loss = []
             for b in range(targets_cls.shape[0]):
-                reg_out[b] = distance2bbox(self.view_anchors_yx, reg_out[b])
-                targets_reg[b] = distance2bbox(self.view_anchors_yx, targets_reg[b])
-                cen_out_b = cen_out[b][mask_reg[b]].view(-1) # (S+)
+                reg_out[b] = distance2bbox(self.a_center_yx, reg_out[b])
+                targets_reg[b] = distance2bbox(self.a_center_yx, targets_reg[b])
                 cls_out_b = cls_out[b][mask_cls[b]] # (S+-, classes)
                 reg_out_b = reg_out[b][mask_reg[b]] # (S+, 4)
-                targets_cen_b = targets_cen[b][mask_reg[b]] # (S+)
                 targets_cls_b = targets_cls[b][mask_cls[b]] # (S+-)
                 targets_reg_b = targets_reg[b][mask_reg[b]] # (S+, 4)
-                loss_cen_b = F.binary_cross_entropy_with_logits(cen_out_b, targets_cen_b, reduction='sum').view(1)
                 loss_cls_b = sigmoid_focal_loss(cls_out_b, targets_cls_b, 2.0, 0.25).sum().view(1)
                 loss_reg_b = iou_loss(reg_out_b, targets_reg_b).sum().view(1)
-                loss.append((loss_cen_b + loss_cls_b + loss_reg_b) / float(num_pos[b])) 
+                loss.append((loss_cls_b + loss_reg_b) / float(num_pos[b])) 
             return torch.cat(loss, dim=0) # (b)
         else:
-            return self._decode(cen_out, cls_out, reg_out, loc)
+            return self._decode(cls_out, reg_out, loc)
 
 
     def _encode(self, label_class, label_box, loc):
         '''
         Param:
-        label_class: LongTensor(batch_num, N_max)
+        label_class: LongTensor(batch_num, N_max)    bg:0
         label_box:   FloatTensor(batch_num, N_max, 4)
         loc:         FloatTensor(batch_num, 4)
 
         Return:
-        targets_cen: FloatTensor(batch_num, shw)
         targets_cls: LongTensor(batch_num, shw)
         targets_reg: FloatTensor(batch_num, shw, 4)
         '''
-        targets_cen, targets_cls, targets_reg = [], [], []
+        targets_cls, targets_reg = [], []
         for b in range(label_class.shape[0]):
             # get tlbr
-            tl = self.view_anchors_yx[:, None, :] - label_box[b][:, :2] 
-            br = label_box[b][:, 2:] - self.view_anchors_yx[:, None, :]
+            tl = self.a_center_yx[:, None, :] - label_box[b][:, :2] 
+            br = label_box[b][:, 2:] - self.a_center_yx[:, None, :]
             tlbr = torch.cat([tl, br], dim=2) # (shw, N_max, 4)
-            # get area
-            area = (tlbr[:, :, 0] + tlbr[:, :, 2]) * (tlbr[:, :, 1] + tlbr[:, :, 3]) # (shw, N_max)
-            # get mask
+            # get center_offset
+            label_yx = (label_box[b, :, :2] + label_box[b, :, 2:]) / 2.0 # (N_max, 2)
+            center_offset_yx = self.a_center_yx[:, None, :] - label_yx[:, :] # (shw, N_max, 2)
+            center_offset = (center_offset_yx[:, :, 0]**2 + 
+                                center_offset_yx[:, :, 1]**2).sqrt() # (shw, N_max)
+            # get mask_pos
             _min = torch.min(tlbr, dim=2)[0] # (shw, N_max)
             _max = torch.max(tlbr, dim=2)[0] # (shw, N_max)
             mask_inside = _min > 0 # (shw, N_max)
-            mask_scale = (_max > self.view_anchors_minmax[:, None, 0]) \
-                & (_max < self.view_anchors_minmax[:, None, 1]) # (shw, N_max)
-            mask_pos = mask_inside & mask_scale # (shw, N_max)
-            # get targets_reg_b
+            mask_scale = (_max > self.a_tlbr_max_minmax[:, None, 0]) \
+                & (_max < self.a_tlbr_max_minmax[:, None, 1]) # (shw, N_max)
+            mask_center_offset = center_offset < \
+                    self.a_center_offset_max.view(-1,1).expand_as(center_offset) # (shw, N_max)
+            mask_pos = mask_inside & mask_scale & mask_center_offset # (shw, N_max)
+            # get area
+            area = (tlbr[:, :, 0] + tlbr[:, :, 2]) \
+                * (tlbr[:, :, 1] + tlbr[:, :, 3]) # (shw, N_max)
             area[~mask_pos] = 999999999 # inf
-            area_s = torch.min(area, dim=1)[1] # (shw) long
-            targets_reg_b = tlbr[torch.zeros_like(area, dtype=torch.uint8).scatter_(1, area_s.view(-1,1), 1)] # (shw, 4)
+            # get area_min_index
+            area_min_index = torch.min(area, dim=1)[1] # (shw) long
             # get targets_cls_b
-            targets_cls_b = label_class[b][area_s] # (shw)
-            targets_cls_b[~torch.max(mask_pos, dim=1)[0]] = 0
-            # get targets_cen_b
-            _lr = targets_reg_b[:, 1::2] # (shw, 2)
-            _tb = targets_reg_b[:, 0::2] # (shw, 2)
-            min_lr = torch.min(_lr, dim=1)[0] # (shw)
-            max_lr = torch.max(_lr, dim=1)[0] # (shw)
-            min_tb = torch.min(_tb, dim=1)[0] # (shw)
-            max_tb = torch.max(_tb, dim=1)[0] # (shw)
-            targets_cen_b = ((min_lr*min_tb)/(max_lr*max_tb+1e-10)).sqrt()
+            targets_cls_b = label_class[b][area_min_index] # (shw)
+            mask_pos_shw = torch.max(mask_pos, dim=1)[0]
+            targets_cls_b[~mask_pos_shw] = 0
+            # get targets_reg_b
+            targets_reg_b = tlbr[ # tlbr: (shw, N_max, 4)
+                torch.zeros_like(area, # (shw, N_max)
+                 dtype=torch.uint8).scatter_(
+                     1, area_min_index.view(-1,1), 1)] # (shw, 4)
             # ignore
-            cd1 = self.view_anchors_yx - loc[b, :2]
-            cd2 = loc[b, 2:] - self.view_anchors_yx
+            cd1 = self.a_center_yx - loc[b, :2]
+            cd2 = loc[b, 2:] - self.a_center_yx
             mask = (cd1.min(dim=1)[0] < 0) | (cd2.min(dim=1)[0] < 0)
             targets_cls_b[mask] = -1
             # append
-            targets_cen.append(targets_cen_b)
             targets_cls.append(targets_cls_b)
             targets_reg.append(targets_reg_b)
-        return torch.stack(targets_cen), torch.stack(targets_cls), torch.stack(targets_reg)
+        return torch.stack(targets_cls), torch.stack(targets_reg)
     
 
-    def _decode(self, cen_out, cls_out, reg_out, loc):
+    def _decode(self, cls_out, reg_out, loc, pred_acc=True):
         '''
         Param:
-        cen_out: FloatTensor(batch_num, shw, 1)
         cls_out: FloatTensor(batch_num, shw, classes)
         reg_out: FloatTensor(batch_num, shw, 4)
         loc:     FloatTensor(batch_num, 4)
@@ -240,19 +228,18 @@ class Detector(nn.Module):
         cls_p_preds: FloatTensor(batch_num, topk)
         reg_preds:   FloatTensor(batch_num, topk, 4)
         '''
-        cen_out = cen_out.sigmoid().view(cen_out.shape[0], cen_out.shape[1]) # (b, shw)
         cls_p_preds, cls_i_preds = torch.max(cls_out.sigmoid(), dim=2) # (b, shw)
-        cls_p_preds = cls_p_preds * cen_out
-        cls_i_preds = cls_i_preds + 1
+        if pred_acc:
+            cls_i_preds = cls_i_preds + 1
         reg_preds = []
         for b in range(cls_out.shape[0]):
             # box transform
             reg_tlbr = reg_out[b] # (shw, 4)
-            reg_yxyx = distance2bbox(self.view_anchors_yx, reg_tlbr) # (shw, 4)
+            reg_yxyx = distance2bbox(self.a_center_yx, reg_tlbr) # (shw, 4)
             reg_preds.append(reg_yxyx)
             # ignore
-            cd1 = self.view_anchors_yx - loc[b, :2]
-            cd2 = loc[b, 2:] - self.view_anchors_yx
+            cd1 = self.a_center_yx - loc[b, :2]
+            cd2 = loc[b, 2:] - self.a_center_yx
             mask = (cd1.min(dim=1)[0] < 0) | (cd2.min(dim=1)[0] < 0)
             cls_p_preds[b, mask] = 0
         reg_preds = torch.stack(reg_preds) # (b, shw)
