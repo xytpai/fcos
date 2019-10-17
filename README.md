@@ -11,8 +11,8 @@ https://arxiv.org/abs/1904.01355
 - Add center sample mechanism to improve performance.
 
 | paper (800px) | official (800px) | ours (nearly 700px) |
-| :--: | :--: | :--: | ---- |
-| 36.6 | 38.7 | **37.1** ||
+| :-----------: | :--------------: | :-----------------: |
+|     36.6      |       38.7       |      **37.1**       |
 
 ![](images/pred_demo.bmp)
 
