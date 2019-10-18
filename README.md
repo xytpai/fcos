@@ -22,7 +22,7 @@ Some *cuda* operations are provided for acceleration.
 ```bash
 cd libs/nms_cuda
 python setup.py install
-cd libs/sigmoid_focal_loss_cuda.py
+cd libs/sigmoid_focal_loss_cuda
 python setup.py install
 ```
 
