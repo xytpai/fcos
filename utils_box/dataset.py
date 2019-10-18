@@ -192,7 +192,7 @@ def random_resize_fix(img, boxes, size, img_scale_min):
 COLOR_TABLE = [
     'Red', 'Green', 'Blue', 'Yellow',
     'Purple', 'Orange', 'DarkGreen', 'Purple',
-    'White', 'YellowGreen', 'Maroon', 'Teal',
+    'YellowGreen', 'Maroon', 'Teal',
     'DarkGoldenrod', 'Peru', 'DarkRed', 'Tan',
     'AliceBlue', 'LightBlue', 'Cyan', 'Teal',
     'SpringGreen', 'SeaGreen', 'Lime', 'DarkGreen',
@@ -204,7 +204,7 @@ COLOR_TABLE = [
 
 
 
-def draw_bbox_text(drawObj, ymin, xmin, ymax, xmax, text, color, bd=4):
+def draw_bbox_text(drawObj, ymin, xmin, ymax, xmax, text, color, bd=2):
     drawObj.rectangle((xmin, ymin, xmax, ymin+bd), fill=color)
     drawObj.rectangle((xmin, ymax-bd, xmax, ymax), fill=color)
     drawObj.rectangle((xmin, ymin, xmin+bd, ymax), fill=color)
