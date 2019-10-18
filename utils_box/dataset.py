@@ -204,7 +204,7 @@ COLOR_TABLE = [
 
 
 
-def draw_bbox_text(drawObj, ymin, xmin, ymax, xmax, text, color, bd=8):
+def draw_bbox_text(drawObj, ymin, xmin, ymax, xmax, text, color, bd=4):
     drawObj.rectangle((xmin, ymin, xmax, ymin+bd), fill=color)
     drawObj.rectangle((xmin, ymax-bd, xmax, ymax), fill=color)
     drawObj.rectangle((xmin, ymin, xmin+bd, ymax), fill=color)
