@@ -15,6 +15,13 @@ with open('train.json', 'r') as load_f:
 torch.cuda.set_device(cfg['device'][0])
 
 
+if cfg['seed'] >= 0:
+    seed = cfg['seed']
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
+
 # Prepare the network and read log
 net = Detector(pretrained=cfg['pretrain'])
 log = []
@@ -55,7 +62,7 @@ dataset_eval = Dataset_CSV(cfg['root_eval'], cfg['list_eval'], cfg['name_file'],
 loader_train = torch.utils.data.DataLoader(dataset_train, batch_size=cfg['nbatch_train'], 
                     shuffle=True, num_workers=cfg['num_workers'], collate_fn=dataset_train.collate_fn)
 loader_eval = torch.utils.data.DataLoader(dataset_eval, batch_size=cfg['nbatch_eval'], 
-                    shuffle=False, num_workers=0, collate_fn=dataset_eval.collate_fn)
+                    shuffle=False, num_workers=cfg['num_workers'], collate_fn=dataset_eval.collate_fn)
 
 
 # Prepare optimizer
@@ -67,7 +74,7 @@ opt = torch.optim.SGD(net.parameters(), lr=lr_base,
 
 
 # Prepare lr_func
-WARM_UP_ITERS = 500
+WARM_UP_ITERS = cfg['warmup_iter']
 WARM_UP_FACTOR = 1.0 / 3.0
 def lr_func(step):
     lr = lr_base

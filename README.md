@@ -9,6 +9,7 @@ https://arxiv.org/abs/1904.01355
 
 - Remove *center-ness* branch for simplicity.
 - Add center sample mechanism to improve performance.
+- Note: GPUCompute Capability >= 6.1
 
 | paper (800px) | official (800px) | ours (nearly 700px) |
 | :-----------: | :--------------: | :-----------------: |
@@ -24,49 +25,18 @@ cd libs/nms_cuda
 python setup.py install
 cd libs/sigmoid_focal_loss_cuda
 python setup.py install
+cd libs/assign_box_cuda
+python setup.py install
 ```
 
 ## COCO (2x)
 
-Configure train.json file, add your root. 
-
-```json
-{
-    "root_train": "/home1/xyt/dataset/coco17/images",
-    "root_eval": "/home1/xyt/dataset/coco17/images",
-    "list_train": "data/coco_train2017.txt",
-    "list_eval": "data/coco_val2017.txt",
-    "name_file": "data/coco_name.txt",
-
-    "load": false,
-    "save": true,
-    "pretrain": true,
-    "freeze_bn": true,
-    "freeze_stages": 1,
-    "epoches": 24,
-
-    "nbatch_train": 16,
-    "nbatch_eval": 16,
-    "device": [1,2,3,5,6,7,8,9],
-    "num_workers": 16,
-    
-    "lr_base": 0.01,
-    "lr_gamma": 0.1,
-    "lr_schedule": [120000, 160000],
-    "momentum": 0.9,
-    "weight_decay": 0.0001,
-
-    "boxarea_th": 32,
-    "grad_clip": 3,
-    
-    "img_scale_min": 0.8,
-    "augmentation": false
-}
-```
-
-Command: *python run_train.py*  to start schedule, it takes about 30 hours with 8x Titan-XP.
-
-Command: *python run_analyze.py*  to get mAP curves.
+1. Copy configs/detector_coco.py to ./detector.py
+2. Copy configs/train_coco_2x.json to ./train.json
+3. Configure train.json file, add your root. 
+4. Command: *python run_train.py*  to start schedule, it takes about 30 hours with 8x Titan-XP.
+5. Command: *python run_analyze.py*  to get mAP curves.
+6. Command: *python run_cocoeval.py*  to get mAP.
 
 ```python
 map_mean
@@ -82,8 +52,6 @@ map_75
  0.3148 0.3096 0.3147 0.3098 0.316  0.325  0.3771 0.3817 0.3808 0.3892
  0.3914 0.3937 0.3952 0.3952]
 ```
-
-Command: *python run_cocoeval.py*  to get mAP.
 
 ```python
  Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.371

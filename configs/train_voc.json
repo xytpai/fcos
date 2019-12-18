@@ -1,6 +1,6 @@
 {
-    "root_train": "/home1/xyt/dataset/VOC0712_trainval/JPEGImages",
-    "root_eval": "/home1/xyt/dataset/VOCdevkit/VOC2007/JPEGImages",
+    "root_train": "/home/xyt/dataset/VOC0712_trainval/JPEGImages",
+    "root_eval": "/home/xyt/dataset/VOCdevkit/VOC2007/JPEGImages",
     "list_train": "data/voc_trainval.txt",
     "list_eval": "data/voc_test.txt",
     "name_file": "data/voc_name.txt",

@@ -32,7 +32,7 @@ net.eval()
 dataset_eval = Dataset_CSV(cfg['root_eval'], cfg['list_eval'], cfg['name_file'], 
     size=net.module.view_size, train=False, normalize=True)
 loader_eval = torch.utils.data.DataLoader(dataset_eval, batch_size=cfg['nbatch_eval'], 
-                    shuffle=False, num_workers=0, collate_fn=dataset_eval.collate_fn)
+                    shuffle=False, num_workers=cfg['num_workers'], collate_fn=dataset_eval.collate_fn)
 
 
 # Prepare API structure

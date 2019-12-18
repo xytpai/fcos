@@ -17,13 +17,13 @@ class Detector(nn.Module):
 
         # ---------------------------
         # TODO: Param
-        self.view_size = 641 # odd
-        self.classes = 20
+        self.view_size = 1025 # odd
+        self.classes = 80
         self.nms_th = 0.05
         self.nms_iou = 0.6
         self.max_detections = 3000
         self.tlbr_max_minmax = [[5, 64], [64, 128], [128, 256], [256, 512], [512, 1024]]
-        self.phpw = [[81, 81], [41, 41], [21, 21], [11, 11], [6, 6]]
+        self.phpw = [[129, 129], [65, 65], [33, 33], [17, 17], [9, 9]]
         self.r = [12, 24, 48, 96, 192]
         # ---------------------------
 

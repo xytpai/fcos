@@ -39,16 +39,16 @@ class Trainer(object):
         train one epoch
         '''
         lr = -1
-        for i, (img, bbox, label, loc, scale) in enumerate(self.loader):
+        for i, (imgs, boxes, labels, locs, scales) in enumerate(self.loader):
             if self.lr_func is not None:
                 lr = self.lr_func(self.step)
                 for param_group in self.opt.param_groups:
                     param_group['lr'] = lr
             if i == 0:
-                batch_size = int(img.shape[0])
+                batch_size = int(imgs.shape[0])
             time_start = time.time()
             self.opt.zero_grad()
-            temp = self.net(img, loc, label, bbox)
+            temp = self.net(imgs, locs, labels, boxes)
             loss = get_loss(temp)
             loss.backward()
             if self.grad_clip > 0:
@@ -84,24 +84,24 @@ class Evaluator(object):
         with torch.no_grad():
             self.net.eval()
             pred_bboxes, pred_labels, pred_scores, gt_bboxes, gt_labels = [], [], [], [], []
-            for i, (img, bbox, label, loc, scale) in enumerate(self.loader):
+            for i, (imgs, boxes, labels, locs, scales) in enumerate(self.loader):
                 if i == 0:
-                    batch_size = int(img.shape[0])
-                temp = self.net(img, loc)
-                cls_i_preds, cls_p_preds, reg_preds = get_pred(temp, 
+                    batch_size = int(imgs.shape[0])
+                temp = self.net(imgs, locs)
+                pred_cls_i, pred_cls_p, pred_reg = get_pred(temp, 
                         self.net.module.nms_th, self.net.module.nms_iou) # DataParallel
-                for idx in range(len(cls_i_preds)):
-                    cls_i_preds[idx] = cls_i_preds[idx].cpu().detach().numpy()
-                    cls_p_preds[idx] = cls_p_preds[idx].cpu().detach().numpy()
-                    reg_preds[idx] = reg_preds[idx].cpu().detach().numpy()
+                for idx in range(len(pred_cls_i)):
+                    pred_cls_i[idx] = pred_cls_i[idx].cpu().detach().numpy()
+                    pred_cls_p[idx] = pred_cls_p[idx].cpu().detach().numpy()
+                    pred_reg[idx] = pred_reg[idx].cpu().detach().numpy()
                 _boxes, _label = [], []
-                for idx in range(bbox.shape[0]):
-                    mask = label[idx] > 0
-                    _boxes.append(bbox[idx][mask].detach().numpy())
-                    _label.append(label[idx][mask].detach().numpy())
-                pred_bboxes += reg_preds
-                pred_labels += cls_i_preds
-                pred_scores += cls_p_preds
+                for idx in range(boxes.shape[0]):
+                    mask = labels[idx] > 0
+                    _boxes.append(boxes[idx][mask].detach().numpy())
+                    _label.append(labels[idx][mask].detach().numpy())
+                pred_bboxes += pred_reg
+                pred_labels += pred_cls_i
+                pred_scores += pred_cls_p
                 gt_bboxes += _boxes
                 gt_labels += _label
                 print('  Eval: {}/{}'.format(i*batch_size, len(self.dataset)), end='\r')
@@ -150,20 +150,20 @@ class COCOEvaluator(object):
                 img = img.cuda().view(1, img.shape[0], img.shape[1], img.shape[2])
                 loc = loc.cuda().view(1, -1)
                 temp = self.net(img, loc)
-                cls_i_preds, cls_p_preds, reg_preds = get_pred(temp, 
+                pred_cls_i, pred_cls_p, pred_reg = get_pred(temp, 
                         self.net.nms_th, self.net.nms_iou)
-                cls_i_preds = cls_i_preds[0].cpu()
-                cls_p_preds = cls_p_preds[0].cpu()
-                reg_preds = reg_preds[0].cpu()
-                if reg_preds.shape[0] > 0:
-                    ymin, xmin, ymax, xmax = reg_preds.split([1, 1, 1, 1], dim=1)
+                pred_cls_i = pred_cls_i[0].cpu()
+                pred_cls_p = pred_cls_p[0].cpu()
+                pred_reg = pred_reg[0].cpu()
+                if pred_reg.shape[0] > 0:
+                    ymin, xmin, ymax, xmax = pred_reg.split([1, 1, 1, 1], dim=1)
                     h, w = ymax - ymin, xmax - xmin 
-                    reg_preds = torch.cat([xmin - loc[0, 1].cpu(), ymin - loc[0, 0].cpu(), w, h], dim=1)
-                    reg_preds = reg_preds / float(scale)
-                    for box_id in range(reg_preds.shape[0]):
-                        score = float(cls_p_preds[box_id])
-                        label = int(cls_i_preds[box_id])
-                        box = reg_preds[box_id, :]
+                    pred_reg = torch.cat([xmin - loc[0, 1].cpu(), ymin - loc[0, 0].cpu(), w, h], dim=1)
+                    pred_reg = pred_reg / float(scale)
+                    for box_id in range(pred_reg.shape[0]):
+                        score = float(pred_cls_p[box_id])
+                        label = int(pred_cls_i[box_id])
+                        box = pred_reg[box_id, :]
                         image_result = {
                             'image_id'    : self.val_image_ids[i],
                             'category_id' : self.coco_labels[str(label)],
@@ -199,9 +199,9 @@ class Inferencer(object):
         loc = loc.view(1, -1).cuda()
         with torch.no_grad():
             temp = self.net(img, loc)
-            cls_i_preds, cls_p_preds, reg_preds = get_pred(temp, 
+            pred_cls_i, pred_cls_p, pred_reg = get_pred(temp, 
                 self.net.nms_th, self.net.nms_iou)
-            reg_preds[0][:, 0::2] -= loc[0, 0]
-            reg_preds[0][:, 1::2] -= loc[0, 1]
-            reg_preds[0] /= scale
-        return cls_i_preds[0], cls_p_preds[0], reg_preds[0]
+            pred_reg[0][:, 0::2] -= loc[0, 0]
+            pred_reg[0][:, 1::2] -= loc[0, 1]
+            pred_reg[0] /= scale
+        return pred_cls_i[0], pred_cls_p[0], pred_reg[0]
