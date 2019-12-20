@@ -25,9 +25,9 @@
     "warmup_iter": 500,
 
     "boxarea_th": 32,
-    "grad_clip": 5,
+    "grad_clip": 3,
     
     "img_scale_min": 0.6,
     "augmentation": false,
-    "seed": 0
+    "seed": -1
 }
