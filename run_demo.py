@@ -40,6 +40,8 @@ inferencer = api.Inferencer(net)
 # Run
 for filename in os.listdir('images/'):
     if filename.endswith('jpg'):
+        if filename[:5] == 'pred_': 
+            continue
         img = Image.open(os.path.join('images/', filename))
         if img.mode != 'RGB':
             img = img.convert('RGB')
