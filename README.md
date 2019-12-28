@@ -12,12 +12,13 @@ https://arxiv.org/abs/1904.01355
 - Predect yxhw instead of yxyx +0.3Map.
 - Note: GPUCompute Capability >= 6.1
 
+**Download:**  https://pan.baidu.com/s/1MjsgE2fu86qmWZpVD7a8Aw
+
 | paper (800px) | official (800px) | ours (nearly 700px) |
 | :-----------: | :--------------: | :-----------------: |
 |     36.6      |       38.7       |      **37.3**       |
 
-![](images/pred_demo.bmp)
-
+![](images/pred_street.jpg)
 
 Some *cuda* operations are provided for acceleration. 
 
@@ -68,3 +69,4 @@ map_75
  Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.575
  Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.639
 ```
+
