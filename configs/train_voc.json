@@ -29,5 +29,5 @@
     
     "img_scale_min": 0.6,
     "augmentation": false,
-    "seed": -1
+    "seed": 0
 }

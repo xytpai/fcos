@@ -73,7 +73,8 @@ class Detector(nn.Module):
         nn.init.constant_(self.conv_cls[-1].bias, _bias)
 
         # learnable parameter for scales =====================================
-        self.scale_param = nn.Parameter(torch.ones(len(self.r)))
+        self.scale_param = nn.Parameter(torch.FloatTensor([32,64,128,256,512]))
+        self.scale_param.requires_grad = False
     
 
     def upsample(self, input):
@@ -84,7 +85,7 @@ class Detector(nn.Module):
     def decode_box(self, pred_box, im_h, im_w, ph, pw):
         '''
         Param:
-        pred_box:  F(b, ph, pw, 4) top, left, bottom, right
+        pred_box:  F(b, ph, pw, 4) offset_y, offset_x, h, w
         
         Return:
         pred_box:  F(b, ph, pw, 4) ymin, xmin, ymax, xmax
@@ -94,10 +95,14 @@ class Detector(nn.Module):
         center_y, center_x = torch.meshgrid(y, x) # F(ph, pw)
         center_y = center_y.squeeze(0)
         center_x = center_x.squeeze(0)
-        ymin = center_y - pred_box[:, :, :, 0]
-        xmin = center_x - pred_box[:, :, :, 1]
-        ymax = center_y + pred_box[:, :, :, 2]
-        xmax = center_x + pred_box[:, :, :, 3]
+        cy = pred_box[:, :, :, 0] + center_y
+        cx = pred_box[:, :, :, 1] + center_x
+        ch = pred_box[:, :, :, 2]
+        cw = pred_box[:, :, :, 3]
+        ymin = cy - ch/2.0
+        ymax = cy + ch/2.0
+        xmin = cx - cw/2.0
+        xmax = cx + cw/2.0
         return torch.stack([ymin, xmin, ymax, xmax], dim=3)
     
 
@@ -138,7 +143,7 @@ class Detector(nn.Module):
         pred_reg = []
         for i, feature in enumerate(pred_list):
             cls_i = self.conv_cls(feature)
-            reg_i =  (self.conv_reg(feature) * self.scale_param[i]).exp()
+            reg_i =  self.conv_reg(feature) * self.scale_param[i]
             cls_i = cls_i.permute(0,2,3,1).contiguous()
             reg_i = reg_i.permute(0,2,3,1).contiguous() # b, ph, pw, 4
             reg_i = self.decode_box(reg_i, self.view_size, self.view_size, self.phpw[i][0], self.phpw[i][1])
