@@ -31,6 +31,11 @@ cd libs/assign_box_cuda
 python setup.py install
 ```
 
+## Inference
+
+1. Copy your images (xxx.jpg) to /images.
+2. Command: *python run_demo.py*
+
 ## COCO (2x)
 
 1. Copy configs/detector_coco.py to ./detector.py
