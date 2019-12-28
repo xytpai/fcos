@@ -127,3 +127,7 @@ xxx2.jpg 261 234 553 134 2
 
 3. Create data_eval.txt (same format as data_train.txt)
 4. Config train.json file, add your root.
+
+## Call for suggestions !
+
+We can't achieve the above results in standard 12-epoch training, even if we add the center branch. The possible reasons are: 1. Instead of set minimum side to 800, we set the maxmal side to 1025. 2. There are some tricks we haven't adopted.
