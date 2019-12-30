@@ -9,7 +9,7 @@ https://arxiv.org/abs/1904.01355
 
 - Remove *center-ness* branch for simplicity.
 - Add center sample mechanism to improve performance.
-- Predect yxhw instead of yxyx +0.3Map.
+- Predect yxhw instead of tlbr +0.3Map.
 - Note: GPU Compute Capability >= 6.1 (pytorch>=1.0.0)
 
 **Download:**  https://pan.baidu.com/s/1MjsgE2fu86qmWZpVD7a8Aw
