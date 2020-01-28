@@ -12,7 +12,10 @@ https://arxiv.org/abs/1904.01355
 - Predect yxhw instead of tlbr +0.3Map.
 - Note: GPU Compute Capability >= 6.1 (pytorch>=1.0.0)
 
-**Download:**  https://pan.baidu.com/s/1MjsgE2fu86qmWZpVD7a8Aw
+**Download:**
+
+- Baidu https://pan.baidu.com/s/1MjsgE2fu86qmWZpVD7a8Aw
+- Google https://drive.google.com/open?id=1U-jwZV54ydiuLR5zcOzdbGDXUNDKJZtU
 
 | paper (800px) | official (800px) | ours (nearly 700px) |
 | :-----------: | :--------------: | :-----------------: |
